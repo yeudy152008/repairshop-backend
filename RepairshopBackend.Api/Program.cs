@@ -71,9 +71,10 @@ try
     {
         options.AddPolicy("AllowAngularApp", policy =>
         {
-            policy.WithOrigins("http://localhost:4200")
-                  .SetIsOriginAllowedToAllowWildcardSubdomains()
-                  .WithOrigins("http://localhost:4200", "https://*.amazonaws.com", "http://*.s3-website*.amazonaws.com")
+            policy.WithOrigins(
+                      "http://localhost:4200",
+                      "http://repairshop-os-frontend-ygchdevs.s3-website-us-east-1.amazonaws.com"
+                  )
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
