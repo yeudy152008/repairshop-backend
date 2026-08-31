@@ -73,7 +73,8 @@ try
         {
             policy.WithOrigins(
                       "http://localhost:4200",
-                      "http://repairshop-os-frontend-ygchdevs.s3-website-us-east-1.amazonaws.com"
+                      "http://repairshop-os-frontend-ygchdevs.s3-website-us-east-1.amazonaws.com",
+                      "https://djlj0tn3dy7og.cloudfront.net"
                   )
                   .AllowAnyHeader()
                   .AllowAnyMethod();
