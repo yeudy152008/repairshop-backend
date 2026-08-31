@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="RepairshopBackend.Api/RepairshopBackend.Api.csproj" />
+  <Project Path="RepairshopBackend.Application/RepairshopBackend.Application.csproj" />
+  <Project Path="RepairshopBackend.Domain/RepairshopBackend.Domain.csproj" />
+  <Project Path="RepairshopBackend.Infrastructure/RepairshopBackend.Infrastructure.csproj" />
+</Solution>
