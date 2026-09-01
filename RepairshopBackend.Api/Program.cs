@@ -10,6 +10,7 @@ using RepairshopBackend.Application.Security;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using Microsoft.AspNetCore.HttpOverrides;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -112,6 +113,11 @@ try
     });
 
     var app = builder.Build();
+
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    });
 
     app.UseMiddleware<RepairshopBackend.Api.Middleware.ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging();
