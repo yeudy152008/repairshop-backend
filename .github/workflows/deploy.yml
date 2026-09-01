@@ -51,6 +51,7 @@ jobs:
             sleep 5
             sudo systemctl is-active repairshop-backend
 
+            # Evento 1: alimenta el dashboard de Release Monitoring
             curl -s -X POST "https://xme32696.live.dynatrace.com/platform/ingest/v1/events.sdlc" \
               -H "Authorization: Api-Token ${{ secrets.DT_SDLC_TOKEN }}" \
               -H "Content-Type: application/json" \
@@ -64,3 +65,15 @@ jobs:
                 \"cicd.deployment.status\": \"succeeded\",
                 \"task.outcome\": \"Success\"
               }]"
+
+            # Evento 2: dispara el Workflow que valida el Site Reliability Guardian
+            curl -s -X POST "https://xme32696.live.dynatrace.com/platform/ingest/v1/events.sdlc" \
+              -H "Authorization: Api-Token ${{ secrets.DT_SDLC_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '[{
+                "event.type": "validation.triggered",
+                "event.kind": "SDLC_EVENT",
+                "event.category": "task",
+                "event.provider": "github-actions",
+                "cicd.deployment.name": "Workshop OS Backend"
+              }]'
