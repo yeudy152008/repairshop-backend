@@ -28,25 +28,39 @@ jobs:
           target: "/home/ubuntu/repairshop-backend-new"
           strip_components: 1
 
-      - name: Restart service
+      - name: Restart service and notify Dynatrace
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GITHUB_SHA,GITHUB_RUN_NUMBER
           script: |
             sudo rm -rf /home/ubuntu/repairshop-backend/publish
             sudo mv /home/ubuntu/repairshop-backend-new /home/ubuntu/repairshop-backend/publish
+
+            # Solo actualiza las líneas DT_RELEASE_*, sin tocar el resto del archivo
+            # (ConnectionStrings__DefaultConnection y Jwt__Key deben permanecer intactos)
+            sudo sed -i '/^DT_RELEASE_/d' /etc/repairshop-backend.env
+            echo "DT_RELEASE_VERSION=${GITHUB_SHA:0:7}" | sudo tee -a /etc/repairshop-backend.env
+            echo "DT_RELEASE_STAGE=production" | sudo tee -a /etc/repairshop-backend.env
+            echo "DT_RELEASE_PRODUCT=Workshop OS" | sudo tee -a /etc/repairshop-backend.env
+            echo "DT_RELEASE_BUILD_VERSION=${GITHUB_RUN_NUMBER}" | sudo tee -a /etc/repairshop-backend.env
+
             sudo systemctl restart repairshop-backend
-            curl -s -X POST "https://xme32696.live.dynatrace.com/api/v2/events/ingest" \
-              -H "Authorization: Api-Token ${{ secrets.DT_API_TOKEN }}" \
+            sleep 5
+            sudo systemctl is-active repairshop-backend
+
+            curl -s -X POST "https://xme32696.live.dynatrace.com/platform/ingest/v1/events.sdlc" \
+              -H "Authorization: Api-Token ${{ secrets.DT_SDLC_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d '{
-                "eventType": "CUSTOM_DEPLOYMENT",
-                "title": "Despliegue de Workshop OS Backend",
-                "entitySelector": "type(HOST),entityName(\"ip-172-31-19-156.ec2.internal\")",
-                "properties": {
-                  "dt.event.deployment.name": "Workshop OS Backend",
-                  "dt.event.deployment.project": "repairshop-backend"
-                }
-              }'
+              -d "[{
+                \"event.type\": \"deployment\",
+                \"event.status\": \"finished\",
+                \"event.category\": \"task\",
+                \"event.provider\": \"github-actions\",
+                \"cicd.deployment.name\": \"Workshop OS Backend\",
+                \"cicd.deployment.release_stage\": \"production\",
+                \"cicd.deployment.status\": \"succeeded\",
+                \"task.outcome\": \"Success\"
+              }]"
