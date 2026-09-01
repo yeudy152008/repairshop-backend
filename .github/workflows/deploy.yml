@@ -5,13 +5,48 @@ on:
     branches: [main]
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via SSH
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: dotnet publish RepairshopBackend.Api -c Release -o ./publish
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "publish/*"
+          target: "/home/ubuntu/repairshop-backend-new"
+          strip_components: 1
+
+      - name: Restart service
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: ~/deploy.sh
+          script: |
+            sudo rm -rf /home/ubuntu/repairshop-backend/publish
+            sudo mv /home/ubuntu/repairshop-backend-new /home/ubuntu/repairshop-backend/publish
+            sudo systemctl restart repairshop-backend
+            curl -s -X POST "https://xme32696.live.dynatrace.com/api/v2/events/ingest" \
+              -H "Authorization: Api-Token ${{ secrets.DT_API_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "eventType": "CUSTOM_DEPLOYMENT",
+                "title": "Despliegue de Workshop OS Backend",
+                "entitySelector": "type(HOST),entityName(\"ip-172-31-19-156.ec2.internal\")",
+                "properties": {
+                  "dt.event.deployment.name": "Workshop OS Backend",
+                  "dt.event.deployment.project": "repairshop-backend"
+                }
+              }'
